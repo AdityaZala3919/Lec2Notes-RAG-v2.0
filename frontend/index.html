@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAG-Powered Lecture Summaries</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Markdown rendering library -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- ========== LEFT SIDEBAR ========== -->
+    <aside class="sidebar">
+      <!-- App Title -->
+      <div class="sidebar-header">
+        <h1 class="app-title">📝 Lec2Notes</h1>
+        <p class="app-description">Smarter Notes. Powered by RAG.</p>
+      </div>
+
+      <!-- About Section -->
+      <div class="sidebar-section">
+        <h3 class="section-title">About</h3>
+        <p class="section-text">
+          Transform your lecture transcripts into beautifully structured notes using RAG (Retrieval-Augmented Generation).
+          Upload any transcript and let AI create comprehensive study materials.
+        </p>
+      </div>
+
+      <!-- How RAG Works (Collapsible) -->
+      <div class="sidebar-section collapsible">
+        <h3 class="section-title">🔍 How RAG Works</h3>
+        <ol class="rag-steps">
+          <li><strong>Chunking:</strong> Your transcript is split into smaller, overlapping pieces</li>
+          <li><strong>Embedding:</strong> Each chunk is converted to a vector representation</li>
+          <li><strong>Retrieval:</strong> Most relevant chunks are found for each query</li>
+          <li><strong>Generation:</strong> LLM generates notes using retrieved context</li>
+        </ol>
+      </div>
+
+      <!-- Hyperparameter Controls (Collapsible) -->
+      <div class="sidebar-section collapsible">
+        <button class="collapsible-header" onclick="toggleCollapsible(this)">
+          <span>⚙️ RAG Hyperparameters</span>
+          <span class="chevron">▼</span>
+        </button>
+        <div class="collapsible-content">
+          <div class="param-control">
+            <label for="chunkSize">Chunk Size: <span id="chunkSizeValue">1000</span></label>
+            <input type="range" id="chunkSize" min="200" max="2000" value="1000" step="100"
+                   oninput="updateSliderValue('chunkSize')">
+          </div>
+
+          <div class="param-control">
+            <label for="chunkOverlap">Chunk Overlap: <span id="chunkOverlapValue">200</span></label>
+            <input type="range" id="chunkOverlap" min="0" max="500" value="200" step="50"
+                   oninput="updateSliderValue('chunkOverlap')">
+          </div>
+
+          <div class="param-control">
+            <label for="retrieverK">Retriever K: <span id="retrieverKValue">5</span></label>
+            <input type="range" id="retrieverK" min="1" max="20" value="5" step="1"
+                   oninput="updateSliderValue('retrieverK')">
+          </div>
+
+          <div class="param-control">
+            <label for="temperature">LLM Temperature: <span id="temperatureValue">0.7</span></label>
+            <input type="range" id="temperature" min="0" max="1" value="0.7" step="0.1"
+                   oninput="updateSliderValue('temperature')">
+          </div>
+        </div>
+      </div>
+
+      
+
+      <!-- Footer -->
+      <div class="sidebar-footer">
+        <a href="https://github.com" target="_blank" class="footer-link">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          GitHub
+        </a>
+        <a href="https://docs.langchain.com/" target="_blank" class="footer-link">
+          📚 Documentation
+        </a>
+      </div>
+    </aside>
+
+    <!-- ========== MAIN CONTENT ========== -->
+    <main class="main-content">
+      
+      <!-- Card 1: Upload Document -->
+      <div class="card" id="uploadCard">
+        <div class="card-header">
+          <span class="step-badge">1</span>
+          <h2>Upload Transcript</h2>
+        </div>
+        <div class="card-body">
+          <!-- Username Input -->
+          <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" placeholder="Enter your username" 
+                   oninput="validateUploadForm()">
+          </div>
+
+          <!-- File Upload -->
+          <div class="form-group">
+            <label>Upload File</label>
+            <div class="file-upload-area" id="dropZone" 
+                 ondragover="handleDragOver(event)" 
+                 ondragleave="handleDragLeave(event)"
+                 ondrop="handleDrop(event)"
+                 onclick="document.getElementById('fileInput').click()">
+              <input type="file" id="fileInput" hidden 
+                     accept=".pdf,.txt,.vtt,.srt,.docx,.pptx"
+                     onchange="handleFileSelect(event)">
+              <div class="upload-icon">📄</div>
+              <p class="upload-text">Drag & drop your file here</p>
+              <p class="upload-subtext">or click to browse</p>
+              <p class="upload-formats">PDF, TXT, SRT</p>
+            </div>
+            <div class="selected-file" id="selectedFile"></div>
+          </div>
+
+          <!-- Upload Button -->
+          <button class="btn btn-primary" id="uploadBtn" disabled onclick="uploadDocument()">
+            <span class="btn-icon">⬆️</span>
+            Upload Document
+          </button>
+
+          <!-- Success Message -->
+          <div class="success-message" id="uploadSuccess"></div>
+        </div>
+      </div>
+
+      <!-- Card 2: Session Management -->
+      <div class="card" id="sessionCard">
+        <div class="card-header">
+          <span class="step-badge">2</span>
+          <h2>Session Management</h2>
+        </div>
+        <div class="card-body">
+          <p class="card-info">
+            💡 <strong>Tip:</strong> If you have an existing session ID, you can skip the upload step and use it directly!
+          </p>
+          <!-- Session Mode Toggle -->
+          <div class="form-group">
+            <label>Session Mode</label>
+            <div class="session-mode-toggle">
+              <label class="radio-option">
+                <input type="radio" name="sessionMode" value="new" checked onchange="handleSessionModeChange()">
+                <span>Create New Session</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" name="sessionMode" value="existing" onchange="handleSessionModeChange()">
+                <span>Use Existing Session</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- New Session Section -->
+          <div id="newSessionSection">
+            <!-- Read-only Fields -->
+            <div class="form-row">
+              <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="sessionUsername" readonly class="readonly-input">
+              </div>
+              <div class="form-group">
+                <label>Document ID</label>
+                <input type="text" id="sessionDocId" readonly class="readonly-input">
+              </div>
+            </div>
+
+            <!-- Create Session Button -->
+            <button class="btn btn-primary" id="createSessionBtn" onclick="createSession()">
+              <span class="btn-icon">🔗</span>
+              Create New Session
+            </button>
+          </div>
+
+          <!-- Existing Session Section -->
+          <div id="existingSessionSection" style="display: none;">
+            <div class="form-group">
+              <label for="existingSessionId">Session ID</label>
+              <input type="text" id="existingSessionId" 
+                     placeholder="Enter your existing session ID"
+                     oninput="validateExistingSession()">
+              <small class="input-hint">Paste your previously created session ID</small>
+            </div>
+
+            <button class="btn btn-primary" id="useSessionBtn" disabled onclick="useExistingSession()">
+              <span class="btn-icon">🔗</span>
+              Use This Session
+            </button>
+          </div>
+
+          <!-- Session ID Display -->
+          <div class="session-display" id="sessionDisplay">
+            <label>Active Session ID</label>
+            <div class="session-id-box" id="sessionIdBox"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: Configure Notes -->
+      <div class="card disabled" id="configCard">
+        <div class="card-header">
+          <span class="step-badge">3</span>
+          <h2>Configure Notes</h2>
+        </div>
+        <div class="card-body">
+          <!-- Format Dropdown -->
+          <div class="form-group">
+            <label for="notesFormat">Notes Format</label>
+            <select id="notesFormat" onchange="handleFormatChange()">
+              <option value="type_1">📋 Detailed Structured Study Notes</option>
+              <option value="type_2">🧠 Conceptual Mind Map Style</option>
+              <option value="type_3">📝 Step-by-Step Explanation</option>
+              <option value="type_4">📊 Comparison Table</option>
+              <option value="type_5">📖 Key Terms and Definitions</option>
+              <option value="type_6">🎴 Flashcard Style</option>
+              <option value="type_7">🔢 Formula + Concept Sheet</option>
+              <option value="type_8">🗂️ Topic Clusters</option>
+              <option value="type_9">🔄 Cause and Effect Notes</option>
+              <option value="type_10">✅ Exam-Ready Highlights</option>
+              <option value="type_11">💡 Practical Applications</option>
+              <option value="type_12">⚖️ Pros and Cons</option>
+              <option value="type_13">🔧 Problem-Solution Format</option>
+              <option value="type_14">🎯 Explainer with Analogies</option>
+              <option value="type_15">🌟 Highlight + Expand</option>
+              <option value="type_16">⚡ Quick Review Cheat Sheet</option>
+              <option value="type_17">✏️ Custom Template</option>
+            </select>
+          </div>
+
+          <!-- Custom Prompt (conditional) -->
+          <div class="form-group custom-prompt-group" id="customPromptGroup">
+            <label for="customPrompt">Custom Prompt Template</label>
+            <textarea id="customPrompt" rows="4" 
+                      placeholder="Enter your custom prompt template...&#10;e.g., Create notes focusing on practical examples and real-world applications..."></textarea>
+          </div>
+
+          <!-- Generate Button -->
+          <button class="btn btn-gradient" id="generateBtn" onclick="generateNotes()">
+            <span class="btn-icon">✨</span>
+            Generate Notes
+            <div class="btn-loader" id="generateLoader"></div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Card 4: Output -->
+      <div class="card output-card" id="outputCard">
+        <div class="card-header">
+          <span class="step-badge">4</span>
+          <h2>Generated Notes</h2>
+        </div>
+        <div class="card-body">
+          <!-- Notes Output -->
+          <div class="notes-output" id="notesOutput">
+            <div class="empty-state">
+              <div class="empty-icon">📝</div>
+              <p>Your generated notes will appear here</p>
+              <p class="empty-subtext">Complete the steps above to generate notes</p>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="output-actions" id="outputActions">
+            <button class="btn btn-secondary" onclick="downloadPdf()">
+              <span class="btn-icon">📄</span>
+              Download PDF
+            </button>
+            <button class="btn btn-secondary" onclick="downloadMarkdown()">
+              <span class="btn-icon">📝</span>
+              Download Markdown
+            </button>
+          </div>
+
+          <!-- Chat Section (Collapsible) -->
+          <div class="chat-section" id="chatSection">
+            <button class="chat-toggle" onclick="toggleChat()">
+              <span>💬 Chat with your document</span>
+              <span class="chevron" id="chatChevron">▼</span>
+            </button>
+            <div class="chat-container" id="chatContainer">
+              <div class="chat-history" id="chatHistory">
+                <div class="chat-welcome">
+                  <p>👋 Ask questions about your document!</p>
+                </div>
+              </div>
+              <div class="chat-input-area">
+                <input type="text" id="chatInput" placeholder="Ask a question..."
+                       onkeypress="handleChatKeypress(event)">
+                <button class="btn btn-primary btn-send" onclick="sendChatMessage()">
+                  <span>➤</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
